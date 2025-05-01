@@ -1,0 +1,146 @@
+---
+title: "Restaurant Reviews Sentiment Analysis"
+author: "Obadiah Kiptoo"
+format:
+  html:
+    self-contained: true
+    embed-resources: true
+error: true
+code-fold: true
+---
+
+### Loading data
+```{r, warning = FALSE, message=FALSE}
+# load required packages
+library(tidyverse)
+library(syuzhet)
+library(tidytext)
+library(flextable)
+library(purrr)
+library(textdata)
+library(dplyr)
+#Reading in data from a csv file.
+df <- read.csv("restaurants_reviews.csv")
+#Subsetting data to select only the reviews.
+text.df <- df |>
+  select(reviews_list) |>
+  tibble( text = str_to_lower(reviews_list))
+  #tibble(text = str_to_lower(df$reviews_list))
+```
+
+### Data summary statistics.
+```{r}
+text.df |>
+  head(3) |>
+  flextable()
+```
+
+### Sentiment analysis using `syuzhet package`.
+```{r}
+#analyzing sentiments using the syuzhet package based on the NRC sentiment dictionary
+emotions <- get_nrc_sentiment(text.df$text)
+emo_bar <- colSums(emotions)
+emo_sum <- data.frame(count=emo_bar, emotion=names(emo_bar))
+```
+
+```{r}
+#creating a barplot showing the counts for each of eight different emotions and positive/negative rating
+emo_sum|>
+  ggplot(aes(x = reorder(emotion, -count), y = count, fill = emotion)) +
+  scale_fill_viridis_d() +
+  geom_bar(stat = 'identity')+
+  labs(x = "Emotions",
+       y = "Count",
+       title = "A bar plot of emotion count")+
+  theme_minimal() + 
+  theme(legend.position ="none")
+```
+This bar plot visualizes the distribution of emotions detected from retaurant reviews. The most prominent emotion is positive, with over 10,000 counts, indicating an overall optimistic sentiment for the services offered. Following positive emotions are trust and joy, suggesting a strong presence of confidence and happiness for the overall services.
+
+Among the less frequent but still notable emotions are anticipation, negative, and surprise, showing some level of uncertainty and unexpectedness in service delivery. The least represented emotions include sadness, fear, anger, and disgust, each with fewer than 2,000 instances. 
+
+### sentiment analysis with the tidytext package using the `bing` lexicon.
+```{r, message = FALSE}
+bing_word_counts <- text.df |>
+  unnest_tokens(output = word, input = text) |>
+  inner_join(get_sentiments("bing")) |>
+  count(word, sentiment, sort = TRUE) 
+```
+
+```{r}
+# select top 10 words by sentiment
+bing_words_by_sentiment <- bing_word_counts |> 
+  group_by(sentiment) |>
+  ungroup()
+top_10 <- bing_words_by_sentiment |>
+  head(n = 10) |>
+  flextable() |>
+  set_caption("Top 10 words by sentiment")
+top_10
+```
+
+From the above plot,the word `good` is by far the most commonly used, appearing 4,241 times, which suggests that customers often describe their dining experiences in generally favorable terms.
+
+Other frequently occurring terms include `great`, `nice`, `well`, and `amazing`, all of which reinforce the overall positive tone observed in the dataset. Notably, emotionally charged words like `loved`, `delicious`, and `awesome` highlight customer enthusiasm, particularly regarding the quality of food and service.
+
+```{r}
+#creating a barplot showing contribution of words to sentiment
+bing_words_by_sentiment |> 
+  filter(n >= 100) |>
+  ggplot(aes(word, n, fill = sentiment)) + 
+  geom_col(show.legend = FALSE) + 
+  facet_wrap(~sentiment, scales = "free_y") + 
+  scale_fill_viridis_d() +
+  labs(title = "Word contribution to sentiment",y = "Contribution to sentiment", x = NULL) + 
+  coord_flip()+
+  theme_minimal()
+```
+
+The plot above illustrates the relative contribution of individual words to either positive or negative sentiment in restaurant reviews. On the right side, positive sentiment is strongly influenced by words such as `good`, `great`, `friendly`, `amazing`, and `delicious`, all of which emphasize food quality and service excellence. The word `good` shows the highest contribution, reaffirming its central role in shaping customer positivity.
+
+On the left, the negative sentiment side reveals a much smaller range of influential words, including `slow` ,`bad`, `disappointed`, and `disappointment`, pointing to issues with service speed or unmet expectations. Interestingly, negative contributions are far less frequent and intense compared to positive ones, which aligns with the overall sentiment distribution which supports general positive feedback.
+
+### sentiment analysis with the tidytext package using the `loughran` lexicon
+```{r, message = FALSE,warning=FALSE}
+#sentiment analysis with the tidytext package using the "loughran" lexicon
+loughran_word_counts <- text.df |>
+  unnest_tokens(output = word, input = text) |>
+  inner_join(get_sentiments("loughran"))|>
+  count(word, sentiment, sort = TRUE) 
+```
+
+```{r}
+#selecting top 10 words by sentiment
+loughran_words_by_sentiment <- loughran_word_counts |>
+  group_by(sentiment) |>
+  ungroup()
+top_10 <- loughran_words_by_sentiment |>
+  head(n = 10) |>
+  flextable()
+top_10
+```
+
+The table above displays frequently used sentiment-laden words from restaurant reviews, with a strong emphasis on positive expressions. The word "good" appears most frequently, followed by `great`, `best`, and `perfect`, all of which suggest widespread customer satisfaction with food, service, and ambiance. Words like `friendly`, `beautiful`, and `courteous` highlight the importance of staff demeanor and aesthetic appeal in shaping the dining experience.
+
+Unexpectedly, only one negative word `bad` makes the top ten, with 260 mentions. This reinforces the sentiment analysis finding that most customer reviews skew heavily positive, with relatively few instances of dissatisfaction.
+
+
+```{r}
+#creating a barplot showing contribution of words to sentiment
+loughran_words_by_sentiment |>
+  filter(n >= 25) |>
+  ggplot(aes(word, n, fill = sentiment)) + 
+  geom_col(show.legend = FALSE) + 
+  facet_wrap(~sentiment, scales = "free_y") +
+  scale_fill_viridis_d() +
+  labs(title = "Word contribution to sentiment",y = "Contribution to sentiment", x = NULL) + 
+  coord_flip() +
+  theme_minimal()
+```
+The above visualization breaks down word contributions across three categories: `negative`, `positive`, and `uncertainty`, offering a more nuanced view of sentiment in restaurant reviews.
+
+Positive sentiment dominates the dataset, with standout words like `good`, `great`, and `happy` contributing the most. These words capture customers’ general approval, satisfaction, and enjoyment. Terms like `friendly`, `better`, `courteous`, and `beautiful` emphasize service quality and atmosphere.
+
+Negative sentiment is relatively minimal. However, words such as `bad`, `disappointed`, `disappointment`, and `slow` appear as key contributors, often pointing to delays or unmet expectations in service or food quality.
+
+The uncertainty category highlights hedging or tentative expressions. Words like `maybe`, `might`, and `could` suggest customers are occasionally unsure or reserved in their feedback—possibly when making suggestions or reflecting mixed experiences.

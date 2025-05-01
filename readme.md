@@ -1,4 +1,4 @@
-# Sentiment Analysis of Restaurant Reviews
+# Sentiment analysis of restaurant reviews
 
 ## 📌 Overview
 
@@ -17,7 +17,7 @@ The dataset consists of customer reviews collected from restaurant platforms. I 
 - **tidyverse** – Data manipulation and visualization
 - **syuzhet** – Sentiment and emotion extraction using NRC lexicon
 - **tidytext** – Text tokenization and word frequency analysis
-- **textdata** – Lexicon access (e.g., NRC, Bing)
+- **textdata** – Lexicon access (NRC, Bing and loughran)
 - **dplyr** – Data transformation
 - **flextable** – Clean tabular output for reports
 
